@@ -1,4 +1,4 @@
-package pkg
+package knocker
 
 import (
 	"encoding/json"
