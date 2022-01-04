@@ -24,16 +24,19 @@ var GetTokenHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
 
 	// 電子署名
-	tokenString, _ := token.SignedString([]byte("SECRET"))
+	tokenString, _ := token.SignedString([]byte("普通は環境変数とかに格納した文字列を使う"))
 
 	// JWTを返却
-	w.Write([]byte(tokenString))
+	if _, err := w.Write([]byte(tokenString)); err != nil {
+		panic(err)
+	}
+
 })
 
 // JwtMiddleware check token
 var JwtMiddleware = middleware.New(middleware.Options{
 	ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
-		return []byte("SECRET"), nil
+		return []byte("普通は環境変数とかに格納した文字列を使う"), nil
 	},
 	SigningMethod: jwt.SigningMethodHS256,
 })
