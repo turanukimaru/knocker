@@ -122,11 +122,11 @@ type PongResponse struct {
 
 // Private api
 var private = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	post := PrivateResponse{
+	reply := PrivateResponse{
 		Title: "jwt token が無いとアクセスできないはず",
 		Tag:   "Go",
 	}
-	json.NewEncoder(w).Encode(post)
+	json.NewEncoder(w).Encode(reply)
 })
 
 // Private Response
