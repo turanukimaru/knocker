@@ -29,7 +29,12 @@ func (k *Knocker) Knock(method string, path string, param io.Reader, v interface
 	if err != nil {
 		return nil, "", err
 	}
-
+	defer func() {
+		err := res.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
 	resBody, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return nil, "", err
