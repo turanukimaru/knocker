@@ -1,12 +1,14 @@
 package knocker
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/turanukimaru/knocker/auth"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"sync"
@@ -32,6 +34,43 @@ func TestKnock(t *testing.T) {
 		assert.Equal(t, 200, res.StatusCode)
 		fmt.Println(b)
 		assert.Equal(t, "pong!", v.Res)
+	}
+
+	log.Printf("test done\n")
+
+	if err := server.Shutdown(context.TODO()); err != nil {
+		log.Printf("Shutdown error\n")
+		log.Println(err)
+		panic(err)
+	}
+
+	wg.Wait()
+	log.Printf("receive server shutdown\n")
+}
+
+func TestPost(t *testing.T) {
+
+	// デフォルトハンドラを使うときはこの形式
+	http.HandleFunc("/ping", postHandler) // ハンドラを登録してウェブページを表示させる
+
+	server := http.Server{Addr: ":8080"}
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go ServerStart(&wg, &server)()
+	k := Knocker{"127.0.0.1", 8080, ""}
+	{
+		p := PongRequest{"↑", Content{"↓"}}
+		j, err := json.Marshal(p)
+		buffer := bytes.Buffer{}
+		buffer.Write(j)
+		v := &PongRequest{}
+		res, b, err := k.Knock(http.MethodGet, "/ping", &buffer, v)
+		if err != nil {
+			panic(err)
+		}
+		assert.Equal(t, 200, res.StatusCode)
+		fmt.Printf("response:%s\n", b)
+		assert.Equal(t, "req=↑", v.Req)
 	}
 
 	log.Printf("test done\n")
@@ -109,6 +148,25 @@ func ServerStart(wg *sync.WaitGroup, server *http.Server) func() {
 }
 
 // Public api
+func postHandler(w http.ResponseWriter, r *http.Request) {
+	resBody, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		panic(err)
+	}
+	v := PongRequest{}
+	if err := json.Unmarshal(resBody, &v); err != nil {
+		panic(err)
+	}
+	v.Req = "req=" + v.Req
+	v.Child.Contents = "contents=" + v.Child.Contents
+	res, err := json.Marshal(v)
+	resString := string(res)
+	if _, err := fmt.Fprintf(w, "%s", resString); err != nil {
+		panic(err)
+	}
+}
+
+// Public api
 func pongHandler(w http.ResponseWriter, r *http.Request) {
 	if _, err := fmt.Fprintf(w, `{"res":"pong!"}`); err != nil {
 		panic(err)
@@ -118,6 +176,15 @@ func pongHandler(w http.ResponseWriter, r *http.Request) {
 // Pong Response
 type PongResponse struct {
 	Res string
+}
+
+// Pong Response
+type PongRequest struct {
+	Req   string
+	Child Content
+}
+type Content struct {
+	Contents string
 }
 
 // Private api
